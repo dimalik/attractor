@@ -1,0 +1,4 @@
+/trash/attractor.py
+*.txt
+*.pkl
+data/mcrae.pkl
