@@ -1,7 +1,10 @@
 import cPickle as pkl
+import logging
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 class Model(object):
@@ -20,7 +23,7 @@ class McRaeModel(Model):
                 ids.append((i, arg, self.dicts[0][arg],))
             except KeyError:
                 print 'Word %s not found... skipping' % arg
-        matrix = self.matrix[[x[2] for x in ids], :]
+        matrix = self.matrix[[x[2] for x in ids], :].astype('float32')
         dicts = [dict([(x[1], x[0],) for x in ids]), self.dicts[1]]
         return McRaeModel(dicts, matrix)
 
@@ -36,15 +39,15 @@ class McRaeModel(Model):
 def loadMcRae(path):
     df = pd.read_csv(path, delimiter='\t')
     dicts = [{v: i for i, v in enumerate(set(df[value].tolist()))}
-             for value in ['Concept', 'Feature'] ]
-    
+             for value in ['Concept', 'Feature']]
+
     concept_feature_dict = {
         id_: [dicts[1][x]
               for x in df[df['Concept'] == concept]['Feature'].tolist()]
         for concept, id_ in dicts[0].iteritems()}
-    
-    matrix = np.zeros([len(dicts[0]), len(dicts[1])])
-    
+
+    matrix = np.zeros([len(dicts[0]), len(dicts[1])], dtype='float32')
+
     for i in xrange(len(concept_feature_dict)):
         matrix[i, concept_feature_dict[i]] = 1
 

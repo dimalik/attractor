@@ -7,16 +7,10 @@ import theano.tensor as T
 
 logger = logging.getLogger(__name__)
 
-MIN = np.finfo('float32').resolution
-MAX = 1 - MIN
-
-np.random.seed(1337)
-
 
 class AbstractNet(object):
     def cross_entropy(self, y_pred, y_true):
         return T.sum(T.nnet.binary_crossentropy(y_pred, y_true), axis=-1)
-
 
     def gradient_updates_momentum(self, cost, params, learning_rate, momentum):
         assert momentum < 1 and momentum >= 0
@@ -24,7 +18,7 @@ class AbstractNet(object):
         updates = []
         for param in params:
             param_update = theano.shared(param.get_value() * 0.,
-                                         broadcastable = param.broadcastable)
+                                         broadcastable=param.broadcastable)
             updates.append((param, param - learning_rate * param_update))
             updates.append((param_update, momentum * param_update +
                             (1. - momentum) * T.grad(cost, param)))
@@ -53,7 +47,6 @@ by sampling uniformly from -.05 to .05.")
                                        size=(self.n_in, self.n_out)),
                      dtype=theano.config.floatX), name="W_oi", borrow=True)
 
-        
         logger.info("Output to output weights not provided...Initializing\
 by sampling uniformly from -.05 to .05.")
         W_oo = np.array(np.random.uniform(-.05, .05,
@@ -64,7 +57,6 @@ by sampling uniformly from -.05 to .05.")
         W_oo -= np.diag(np.diag(W_oo))
         self.W_oo = theano.shared(W_oo, name="W_oo", borrow=True)
 
-        
         logger.info("Bias weights not provided...Initializing to zero.")
         self.b = theano.shared(
             np.zeros(n_out,

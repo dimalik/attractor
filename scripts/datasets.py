@@ -1,14 +1,17 @@
 import cPickle as pkl
+import logging
 
 import numpy as np
 import pandas as pd
 
 from scripts import McRaeModel
 
+logger = logging.getLogger(__name__)
+
 
 def pickleLoader(path):
     with file(path, 'rb') as fin:
-        tmp = pkl.load(fin) 
+        tmp = pkl.load(fin)
     return tmp
 
 
@@ -23,20 +26,22 @@ class RandomInput(object):
     @staticmethod
     def lexsorting(data):
         sorted_idx = np.lexsort(data.T)
-        sorted_data =  data[sorted_idx,:]
-        row_mask = np.append([True],np.any(np.diff(sorted_data,axis=0), 1))
+        sorted_data = data[sorted_idx, :]
+        row_mask = np.append([True], np.any(np.diff(sorted_data, axis=0), 1))
         return sorted_data[row_mask]
 
     @staticmethod
     def getExamples(nb_examples, nb_dims, prob):
-        return np.random.binomial(1, prob, size=[nb_examples, nb_dims])
+        return np.array(np.random.binomial(1, prob, size=[nb_examples,
+                                                          nb_dims]),
+                        dtype='float32')
 
     def getX(self):
         lexsorted = self.lexsorting(self.getExamples(self.nb_examples,
                                                      self.nb_dims,
                                                      self.prob))
         i = 0
-        while lexsorted.shape[0] < self._nb_examples and i < self.max_iter:
+        while lexsorted.shape[0] < self.nb_examples and i < self.max_iter:
             i += 1
             lexsorted_new = self.lexsorting(self.getExamples(self.nb_examples,
                                                              self.nb_dims,
@@ -46,7 +51,8 @@ class RandomInput(object):
                                                        axis=0))
         if lexsorted.shape[0] > self.nb_examples:
             return lexsorted[np.random.choice(lexsorted.shape[0],
-                                              self.nb_examples, replace=False), :]
+                                              self.nb_examples,
+                                              replace=False), :]
         return lexsorted
 
 
@@ -54,6 +60,8 @@ class Experiment(object):
     def __init__(self, mcrae_path, words_path):
         self.mcrae_path = mcrae_path
         self.words_path = words_path
+        self.initModel()
+        self.prepDataset()
 
     def initModel(self):
         mcrae_all = McRaeModel()
@@ -71,10 +79,11 @@ class Experiment(object):
                 self.exclude.append(word)
 
         self.experiment = mcrae_all.getWordMatrix(*self.include)
+        self.experiment.matrix.astype('float32', copy=False)
 
     def prepDataset(self):
         raise NotImplementedError
-        
+
 
 class McRaeBoisvertExperiment(Experiment):
 
@@ -83,9 +92,9 @@ class McRaeBoisvertExperiment(Experiment):
         targets = self.words['Target'] * 2
         desc = ['Similar'] * len(self.words['Target']) + \
                ['Dissimilar'] * len(self.words['Target'])
-        
+
         self.df = pd.DataFrame(data={'Primes': primes, 'Targets': targets,
-                                'Description': desc})
+                                     'Description': desc})
 
         self.df.drop(self.df.loc[self.df.isin(self.exclude).any(1)].index,
                      inplace=True)
