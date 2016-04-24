@@ -1,0 +1,14 @@
+[CONSTANTS]
+input_dims = 30
+data_path = data
+binomial_probability = 0.3
+max_iterations = 100
+
+[ATTRACTOR]
+nb_ticks = 20
+tau = 0.2
+train_for = 10
+epochs = 50
+init_min = 0.0
+init_max = 0.1
+

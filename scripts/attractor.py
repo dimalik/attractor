@@ -5,14 +5,41 @@ import numpy as np
 import theano
 import theano.tensor as T
 
+from config import options
+
+theano.config.floatX = 'float32'
+
 logger = logging.getLogger(__name__)
+theano.config.exception_verbosity = 'high'
 
 
-class AbstractNet(object):
+class Net(object):
+
+    def cost_function(self):
+        raise NotImplementedError
+
+    def gradients(self):
+        raise NotImplementedError
+    
+    def pre_epoch(self):
+        pass
+
+    def post_epoch(self):
+        pass
+
+    def save(self):
+        pass
+
+    def load(self):
+        pass
+    
+
+class AbstractAttractor(Net):
     def cross_entropy(self, y_pred, y_true):
         return T.sum(T.nnet.binary_crossentropy(y_pred, y_true), axis=-1)
 
-    def gradient_updates_momentum(self, cost, params, learning_rate, momentum):
+    def gradient_updates_momentum(self, cost, params,
+                                  learning_rate, momentum):
         assert momentum < 1 and momentum >= 0
 
         updates = []
@@ -24,10 +51,17 @@ class AbstractNet(object):
                             (1. - momentum) * T.grad(cost, param)))
         return updates
 
+    def cost_function(self, *args, **kwargs):
+        return self.cross_entropy(*args, **kwargs)
 
-class Attractor(AbstractNet):
-    def __init__(self, n_in, n_out, n_ticks=20, tau=0.2,
-                 activation=T.nnet.sigmoid, train_for=10):
+    def gradients(self, *args, **kwargs):
+        return self.gradient_updates_momentum(*args, **kwargs)
+
+
+class Attractor(AbstractAttractor):
+    def __init__(self, n_in, n_out, n_ticks=options['nb_ticks'],
+                 tau=options['tau'], activation=T.nnet.sigmoid,
+                 train_for=options['train_for'], batch_size=30):
 
         self.n_in = n_in
         self.n_out = n_out
@@ -35,31 +69,45 @@ class Attractor(AbstractNet):
         self.tau = tau
         self.activation = activation
         self.train_for = train_for
+        self.batch_size = batch_size
+
+        # report vars
 
         self.input = T.matrix()
+        self.y = T.matrix()
         self.init = T.matrix()
         self.old_activation = T.matrix()
 
-        logger.info("Input to output weights not provided...Initializing\
-by sampling uniformly from -.05 to .05.")
-        self.W_oi = theano.shared(
-            np.array(np.random.uniform(-.05, .05,
-                                       size=(self.n_in, self.n_out)),
-                     dtype=theano.config.floatX), name="W_oi", borrow=True)
+        self._init()
+        
+    def _init(self):
 
-        logger.info("Output to output weights not provided...Initializing\
-by sampling uniformly from -.05 to .05.")
+        logger.info('Initializing weight matrices..')
+        
+        logger.info("Initializing input to output weights by sampling \
+        uniformly from -.05 to .05.")
+        self.W_oi = theano.shared(
+            np.array(
+                np.random.uniform(-.05,.05,
+                                  size=(self.n_in,
+                                        self.n_out)),
+                dtype=theano.config.floatX),
+            name="W_oi",
+            borrow=True)
+
+        logger.info("Initializing output to output weights by sampling \
+        uniformly from -.05 to .05.")
         W_oo = np.array(np.random.uniform(-.05, .05,
                                           size=(self.n_out,
                                                 self.n_out)),
                         dtype=theano.config.floatX)
-
-        W_oo -= np.diag(np.diag(W_oo))
+        logger.info('Removing self-connections')
+        W_oo -= np.diag(np.diag(W_oo))  # zero the diagonal
         self.W_oo = theano.shared(W_oo, name="W_oo", borrow=True)
 
-        logger.info("Bias weights not provided...Initializing to zero.")
+        logger.info("Initializing bias weights to zero.")
         self.b = theano.shared(
-            np.zeros(n_out,
+            np.zeros(self.n_out,
                      dtype=theano.config.floatX),
             name="bias", borrow=True)
 
@@ -81,33 +129,71 @@ by sampling uniformly from -.05 to .05.")
                                                  self.W_oo,
                                                  self.b],
                                   n_steps=self.n_ticks, strict=True)
-        return results[self.train_for:]
+        return [results, old]
 
-    def fit(self, X, y_, init=None, learning_rate=0.1, momentum=0.9,
-            batch_size=50, nb_epochs=50):
+    def post_epoch(self):
+        cur_value = self.W_oo.get_value()
+        self.W_oo.set_value(cur_value - np.diag(
+            np.diag(cur_value)))
 
-        y = T.matrix()
-        old_activation = np.zeros((batch_size, self.n_out),
-                                  dtype=theano.config.floatX)
+
+    def fit(self, X_, y_, init=None, learning_rate=0.1, momentum=0.9,
+            nb_epochs=options['epochs']):
+
+        i = T.lscalar()
 
         if init is None:
-            init = np.random.uniform(0, .01, size=(batch_size, self.n_out))
+            init = np.array(np.random.uniform(0, .01,
+                                              size=(self.batch_size,
+                                                    self.n_out)),
+                            dtype='float32')
+
+        old_activation = np.zeros((self.batch_size, self.n_out),
+                                  dtype=theano.config.floatX)
+
 
         cost = self.tau * (
-            self.cross_entropy(self.trial(), y).sum() / self.train_for)
+            self.cost_function(
+                self.trial()[0][self.train_for:],
+                self.y).sum() / self.train_for)
+
 
         train = theano.function(
-            [self.input, y],
+            [self.input, self.y],
             cost,
-            updates=self.gradient_updates_momentum(cost,
-                                                   self.params,
-                                                   learning_rate,
-                                                   momentum),
+            updates=self.gradients(cost,
+                                   self.params,
+                                   learning_rate,
+                                   momentum),
             givens={self.init: init,
                     self.old_activation: old_activation})
 
-        for i_ in range(nb_epochs):
-            print train(X, y_)
-            cur_value = self.W_oo.get_value()
-            self.W_oo.set_value(cur_value - np.diag(
-                np.diag(cur_value)))
+        for i in range(nb_epochs):
+            self.pre_epoch()
+            epoch_cost = train(X_, y_)
+            print epoch_cost
+            logger.info('Epoch: %d\tCost: %f' % (i + 1, epoch_cost))
+            self.post_epoch()
+
+
+    def get_priming(self, word_vecs):
+        init = np.array(np.random.uniform(0, .01,
+                                          size=(1, self.n_out)),
+                        dtype='float32')
+
+        old_activation = np.zeros((1, self.n_out),
+                                  dtype=theano.config.floatX)
+
+        fun = theano.function([self.input], self.trial(),
+                              givens={
+                                  self.init: init,
+                                  self.old_activation: old_activation})
+        reslist = []
+        
+        for word in word_vecs:
+            results, old = fun(np.array(word, ndmin=2))
+            init = np.array(results[-1], ndmin=2)
+            old_activation = np.array(old[-1], ndmin=2)
+            reslist.append(results)
+        return np.concatenate(reslist)
+        

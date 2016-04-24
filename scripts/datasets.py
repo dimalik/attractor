@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from scripts import McRaeModel
+from config import options
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,9 @@ def pickleLoader(path):
 
 
 class RandomInput(object):
-    def __init__(self, nb_examples, nb_dims, prob=0.5, max_iter=100):
+    def __init__(self, nb_examples, nb_dims,
+                 prob=options['binomial_probability'],
+                 max_iter=options['max_iterations']):
         self.nb_examples = nb_examples
         self.nb_dims = nb_dims
         self.prob = prob
