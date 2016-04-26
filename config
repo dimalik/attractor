@@ -8,7 +8,7 @@ max_iterations = 100
 nb_ticks = 20
 tau = 0.2
 train_for = 10
-epochs = 50
+epochs = 200
 init_min = 0.0
 init_max = 0.1
 

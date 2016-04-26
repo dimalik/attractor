@@ -88,7 +88,7 @@ class Attractor(AbstractAttractor):
         uniformly from -.05 to .05.")
         self.W_oi = theano.shared(
             np.array(
-                np.random.uniform(-.05,.05,
+                np.random.uniform(-.05, .05,
                                   size=(self.n_in,
                                         self.n_out)),
                 dtype=theano.config.floatX),
@@ -136,7 +136,6 @@ class Attractor(AbstractAttractor):
         self.W_oo.set_value(cur_value - np.diag(
             np.diag(cur_value)))
 
-
     def fit(self, X_, y_, init=None, learning_rate=0.1, momentum=0.9,
             nb_epochs=options['epochs']):
 
@@ -151,12 +150,10 @@ class Attractor(AbstractAttractor):
         old_activation = np.zeros((self.batch_size, self.n_out),
                                   dtype=theano.config.floatX)
 
-
         cost = self.tau * (
             self.cost_function(
                 self.trial()[0][self.train_for:],
                 self.y).sum() / self.train_for)
-
 
         train = theano.function(
             [self.input, self.y],
@@ -175,7 +172,6 @@ class Attractor(AbstractAttractor):
             logger.info('Epoch: %d\tCost: %f' % (i + 1, epoch_cost))
             self.post_epoch()
 
-
     def get_priming(self, word_vecs):
         init = np.array(np.random.uniform(0, .01,
                                           size=(1, self.n_out)),
@@ -184,14 +180,12 @@ class Attractor(AbstractAttractor):
         old_activation = np.zeros((1, self.n_out),
                                   dtype=theano.config.floatX)
 
-        fun = theano.function([self.input], self.trial(),
-                              givens={
-                                  self.init: init,
-                                  self.old_activation: old_activation})
+        fun = theano.function([self.input, self.init, self.old_activation],
+                              self.trial())
         reslist = []
         
         for word in word_vecs:
-            results, old = fun(np.array(word, ndmin=2))
+            results, old = fun(np.array(word, ndmin=2), init, old_activation)
             init = np.array(results[-1], ndmin=2)
             old_activation = np.array(old[-1], ndmin=2)
             reslist.append(results)
