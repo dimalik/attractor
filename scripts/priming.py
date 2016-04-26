@@ -20,3 +20,4 @@ def priming(vectors, mappings, df, fun, n_ticks=40):
         curves.append([label, mat.mean(axis=0)])
 
     return dict(curves)
+ 

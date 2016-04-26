@@ -30,7 +30,9 @@ config = ConfigParser.ConfigParser({
     'train_for': '10',
     'epochs': '50',
     'init_min': '0.0',
-    'init_max': '0.1'})
+    'init_max': '0.1',
+    'mcrae_path': 'mcrae.pkl',
+    'words_path': 'words.pkl'})
 
 config.read('config')
 
@@ -40,10 +42,11 @@ options = {
     'binomial_probability': config.getfloat('CONSTANTS',
                                             'binomial_probability'),
     'max_iterations': config.getint('CONSTANTS', 'max_iterations'),
+    'mcrae_path': config.get('CONSTANTS', 'mcrae_path'),
+    'words_path': config.get('CONSTANTS', 'words_path'),
     'nb_ticks': config.getint('ATTRACTOR', 'nb_ticks'),
     'tau': config.getfloat('ATTRACTOR', 'tau'),
     'train_for': config.getint('ATTRACTOR', 'train_for'),
     'epochs': config.getint('ATTRACTOR', 'epochs'),
     'init_min': config.getfloat('ATTRACTOR', 'init_min'),
-    'init_max': config.getfloat('ATTRACTOR', 'init_max')
-}
+    'init_max': config.getfloat('ATTRACTOR', 'init_max')}
