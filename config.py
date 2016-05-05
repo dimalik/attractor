@@ -42,11 +42,15 @@ options = {
     'binomial_probability': config.getfloat('CONSTANTS',
                                             'binomial_probability'),
     'max_iterations': config.getint('CONSTANTS', 'max_iterations'),
-    'mcrae_path': config.get('CONSTANTS', 'mcrae_path'),
-    'words_path': config.get('CONSTANTS', 'words_path'),
     'nb_ticks': config.getint('ATTRACTOR', 'nb_ticks'),
     'tau': config.getfloat('ATTRACTOR', 'tau'),
     'train_for': config.getint('ATTRACTOR', 'train_for'),
     'epochs': config.getint('ATTRACTOR', 'epochs'),
     'init_min': config.getfloat('ATTRACTOR', 'init_min'),
     'init_max': config.getfloat('ATTRACTOR', 'init_max')}
+
+
+options['mcrae_path'] = os.path.join(options['data_path'],
+                                     config.get('CONSTANTS', 'mcrae_path'))
+options['words_path'] = os.path.join(options['data_path'],
+                                     config.get('CONSTANTS', 'words_path'))

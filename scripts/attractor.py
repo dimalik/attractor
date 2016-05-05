@@ -12,6 +12,9 @@ theano.config.floatX = 'float32'
 logger = logging.getLogger(__name__)
 theano.config.exception_verbosity = 'high'
 
+MIN = np.finfo('float32').resolution
+MAX = (1 - MIN).astype('float32')
+
 
 class Net(object):
 
@@ -116,7 +119,9 @@ class Attractor(AbstractAttractor):
     def step(self, out, old, tau, Woi, input, Woo, b):
         net = (tau * (T.dot(input, Woi) +
                       T.dot(out, Woo) + b)) + (1. - tau) * old
-        return [self.activation(net), net]
+        act_net = self.activation(net)
+        act_net = act_net.clip(MIN, MAX)  # avoid nans
+        return [act_net, net]
 
     def trial(self):
         (results, old), \

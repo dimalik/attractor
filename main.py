@@ -1,4 +1,3 @@
-import os
 import logging
 
 import numpy as np
@@ -10,21 +9,12 @@ from scripts import Attractor, RandomInput, McRaeBoisvertExperiment
 logger = logging.getLogger(__name__)
 
 
-class RunExperiment(object):
-    def __init__(self, data_path=options['data_path'],
-                 mcrae_path=options['mcrae_path'],
-                 words_path=options['words_path'],
-                 input_dims=options['input_dims'],
-                 binomial_probability=options['binomial_probability'],
-                 epochs=options['epochs'],
-                 ticks=options['nb_ticks']):
-        self.data_path = data_path
-        self.mcrae_path = os.path.join(self.data_path, mcrae_path)
-        self.words_path = os.path.join(self.data_path, words_path)
-        self.input_dims = input_dims
-        self.binomial_probability = binomial_probability
-        self.epochs = epochs
-        self.ticks = ticks
+class Experiment(object):
+    def __init__(self, config_dict):
+        self.__dict__.update(config_dict)
+
+
+class RunExperiment(Experiment):
 
     def trainModel(self):
         logger.info('Loading experiment...')
@@ -44,7 +34,7 @@ with %f probability' % (nb_words, self.input_dims, self.binomial_probability))
                            nb_epochs=self.epochs)
 
     def priming(self):
-        nb_ticks = (2 * self.ticks) - 1
+        nb_ticks = (2 * self.nb_ticks) - 1
         curves = []
     
         for label in ['Similar', 'Dissimilar']:
@@ -76,7 +66,7 @@ with %f probability' % (nb_words, self.input_dims, self.binomial_probability))
 
 
 def main():
-    experiment = RunExperiment()
+    experiment = RunExperiment(options)
     experiment.trainModel()
     experiment.plotResults()
 
