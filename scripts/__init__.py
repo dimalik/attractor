@@ -1,7 +1,7 @@
 from attractor import Attractor
-from mcrae import McRaeModel
+from mcrae import ConceptFeatureModel
 from datasets import McRaeBoisvertExperiment, RandomInput
 from priming import priming
 
-__all__ = ['Attractor', 'McRaeModel', 'McRaeBoisvertExperiment', 'RandomInput',
+__all__ = ['Attractor', 'ConceptFeatureModel', 'McRaeBoisvertExperiment', 'RandomInput',
            'priming']

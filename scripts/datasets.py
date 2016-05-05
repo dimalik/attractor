@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from scripts import McRaeModel
+from scripts import ConceptFeatureModel
 from config import options
 
 logger = logging.getLogger(__name__)
