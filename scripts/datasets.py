@@ -1,25 +1,25 @@
-import cPickle as pkl
 import logging
 
 import numpy as np
-import pandas as pd
 
-from scripts import ConceptFeatureModel
-from config import options
 
 logger = logging.getLogger(__name__)
 
 
-def pickleLoader(path):
-    with file(path, 'rb') as fin:
-        tmp = pkl.load(fin)
-    return tmp
-
-
 class RandomInput(object):
-    def __init__(self, nb_examples, nb_dims,
-                 prob=options['binomial_probability'],
-                 max_iter=options['max_iterations']):
+    """Prepares a random binary input dataset of given dimensionality.
+
+    Attributes:
+        nb_examples (int): The number of examples to generate. If number
+                           is larger than the binary possibilites, all the
+                           generated are going to be returned
+        nb_dims (int): Number of dimensions
+        prob (float \in (0, 1]): The bernoulli probability of each dimension
+                                 being set to 1.
+        max_iter (int): How many times to search for new possible binary
+                        permutations.
+    """
+    def __init__(self, nb_examples, nb_dims, prob=0.5, max_iter=100):
         self.nb_examples = nb_examples
         self.nb_dims = nb_dims
         self.prob = prob
@@ -28,6 +28,7 @@ class RandomInput(object):
 
     @staticmethod
     def lexsorting(data):
+        """Returns the unique rows in a matrix."""
         sorted_idx = np.lexsort(data.T)
         sorted_data = data[sorted_idx, :]
         row_mask = np.append([True], np.any(np.diff(sorted_data, axis=0), 1))
@@ -59,45 +60,30 @@ class RandomInput(object):
         return lexsorted
 
 
-class Experiment(object):
-    def __init__(self, mcrae_path, words_path):
-        self.mcrae_path = mcrae_path
-        self.words_path = words_path
-        self.initModel()
-        self.prepDataset()
+class RandomPairedInput(RandomInput, dict):
+    """Same as RandomInput with an added dict functionality
 
-    def initModel(self):
-        mcrae_all = McRaeModel()
-        mcrae_all.load(self.mcrae_path)
+    Attributes:
+        mappings (iterable): Keys to the dict (values will be the
+                             rows from the matrix).
 
-        # McRae & Boisvert, 1998
-        self.words = pickleLoader(self.words_path)
-        self.include = []
-        self.exclude = []
+    """
+    def __init__(self, mappings, *args, **kwargs):
+        self.mappings = mappings
+        super(RandomPairedInput, self).__init__(*args, **kwargs)
 
-        for word in set([x for y in self.words.values() for x in y]):
-            if word in mcrae_all.dicts[0]:
-                self.include.append(word)
-            else:
-                self.exclude.append(word)
-
-        self.experiment = mcrae_all.getWordMatrix(*self.include)
-        self.experiment.matrix.astype('float32', copy=False)
-
-    def prepDataset(self):
-        raise NotImplementedError
+        for i, word in enumerate(self.mappings):
+            self[word] = self.matrix[i, :]
 
 
-class McRaeBoisvertExperiment(Experiment):
-
-    def prepDataset(self):
-        primes = self.words['Similar'] + self.words['Dissimilar']
-        targets = self.words['Target'] * 2
-        desc = ['Similar'] * len(self.words['Target']) + \
-               ['Dissimilar'] * len(self.words['Target'])
-
-        self.df = pd.DataFrame(data={'Primes': primes, 'Targets': targets,
-                                     'Description': desc})
-
-        self.df.drop(self.df.loc[self.df.isin(self.exclude).any(1)].index,
-                     inplace=True)
+def getRandomInput(nb_examples, nb_dims, prob=0.5, max_iter=100,
+                   mappings=None):
+    if mappings is not None:
+        assert len(mappings) == nb_examples
+        return RandomPairedInput(nb_examples=nb_examples, nb_dims=nb_dims,
+                                 prob=prob, max_iter=max_iter,
+                                 mappings=mappings)
+    else:
+        return RandomInput(nb_examples=nb_examples, nb_dims=nb_dims,
+                           prob=prob, max_iter=max_iter)
+    return False

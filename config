@@ -3,8 +3,6 @@ input_dims = 30
 data_path = data
 binomial_probability = 0.3
 max_iterations = 100
-mcrae_path = mcrae.pkl
-words_path = words.pkl
 
 [ATTRACTOR]
 nb_ticks = 20

@@ -5,7 +5,6 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-from config import options
 
 theano.config.floatX = 'float32'
 
@@ -23,7 +22,7 @@ class Net(object):
 
     def gradients(self):
         raise NotImplementedError
-    
+
     def pre_epoch(self):
         pass
 
@@ -35,7 +34,7 @@ class Net(object):
 
     def load(self):
         pass
-    
+
 
 class AbstractAttractor(Net):
     def cross_entropy(self, y_pred, y_true):
@@ -62,9 +61,8 @@ class AbstractAttractor(Net):
 
 
 class Attractor(AbstractAttractor):
-    def __init__(self, n_in, n_out, n_ticks=options['nb_ticks'],
-                 tau=options['tau'], activation=T.nnet.sigmoid,
-                 train_for=options['train_for'], batch_size=30):
+    def __init__(self, n_in, n_out, n_ticks=20, tau=0.2, train_for=10,
+                 activation=T.nnet.sigmoid, batch_size=30):
 
         self.n_in = n_in
         self.n_out = n_out
@@ -82,11 +80,11 @@ class Attractor(AbstractAttractor):
         self.old_activation = T.matrix()
 
         self._init()
-        
+
     def _init(self):
 
         logger.info('Initializing weight matrices..')
-        
+
         logger.info("Initializing input to output weights by sampling \
         uniformly from -.05 to .05.")
         self.W_oi = theano.shared(
@@ -142,7 +140,7 @@ class Attractor(AbstractAttractor):
             np.diag(cur_value)))
 
     def fit(self, X_, y_, init=None, learning_rate=0.1, momentum=0.9,
-            nb_epochs=options['epochs']):
+            nb_epochs=20):
 
         i = T.lscalar()
 
@@ -182,17 +180,23 @@ class Attractor(AbstractAttractor):
                                           size=(1, self.n_out)),
                         dtype='float32')
 
-        old_activation = np.zeros((1, self.n_out),
-                                  dtype=theano.config.floatX)
+        old_activation = np.array(np.random.uniform(0, .01,
+                                                    size=(1, self.n_out)),
+                                  dtype='float32')
+
+        # old_activation = np.zeros((1, self.n_out),
+        #                           dtype=theano.config.floatX)
 
         fun = theano.function([self.input, self.init, self.old_activation],
                               self.trial())
         reslist = []
-        
+
         for word in word_vecs:
             results, old = fun(np.array(word, ndmin=2), init, old_activation)
             init = np.array(results[-1], ndmin=2)
             old_activation = np.array(old[-1], ndmin=2)
             reslist.append(results)
         return np.concatenate(reslist)
-        
+
+    # def get_activation(self, word_vecs):
+    #     fun = theano.function([self.input, ])
